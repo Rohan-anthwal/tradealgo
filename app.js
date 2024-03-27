@@ -13,13 +13,18 @@ const token_url = 'https://api.upstox.com/v2/login/authorization/token';
 // NEED TO WRITE SL FUNCTION AND HIGH LOW UPDATION
 
 // Initialize variables to hold high and low prices
-let highPrice = 46919;
-let lowPrice = 46812;
-let inorder = false;
+let highPrice = 46937.45;
+let lowPrice = 46675.35;
+let stageOne;
+let inorder = true;
 let highBroken = false; // Flag to track if high has broken in last 5-minute candle
 let lowBroken = false; // Flag to track if low has broken in last 5-minute candle
 let timeblock = false;
 let prevtimeblock = false;
+let bought = true;
+let sold = false;
+let ltpKey = ;
+let count  = 0;
 
 // DS To store Values
 class Node {
@@ -81,8 +86,8 @@ class Queue {
         }
           const arr =  [highestValue,lowestValue];
           
-        console.log("Highest value:", highestValue);
-        console.log("Lowest value:", lowestValue);
+        // console.log("Highest value:", highestValue);
+        // console.log("Lowest value:", lowestValue);
         return arr;
     }
 }
@@ -115,7 +120,11 @@ app.get("/", (req, res) => {   // Working Fine
         'Content-Type': 'application/x-www-form-urlencoded',
       };
     const token_data = {
-        
+        'code': code,
+       
+        'redirect_uri': 'http://localhost:3000/token',
+        'grant_type': code,
+
     };
 
     try {
@@ -133,15 +142,21 @@ async function getInstrumentKey(ltp,cepe){  // Working fine
     ltp = ltp *100
     if(cepe === "CE")ltp = ltp + 500 + "CE";
     if(cepe === "PE")ltp = ltp - 500 + "PE";
-    let key = 'BANKNIFTY24410'
+    let key = 'BANKNIFTY24403'
     let option = key + ltp ;
  const response = await db.query("SELECT instrument_key FROM public.stocks_table WHERE tradingsymbol = '"+ option + "'");
  console.log(response.rows[0].instrument_key);
  return response.rows[0].instrument_key
  }
+//  async function test() {
+//     let g = await getInstrumentKey(46000,"PE");
+//  console.log(g);
+//  }
+//  test();
+ 
 
 
-async function buy_order(ltp, cepe, access) {  // Working fine works only in between market hours
+async function buy_order(ltp, cepe, access,type) {  // Working fine works only in between market hours
     
       //  const auth = 'Bearer ' + access;
         // console.log(auth);
@@ -151,6 +166,7 @@ async function buy_order(ltp, cepe, access) {  // Working fine works only in bet
             'Authorization': 'Bearer ' + access,
         };
         const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
+        ltpKey = instrumentKey;
         // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
         const order_data = {
             quantity: 15,
@@ -160,7 +176,7 @@ async function buy_order(ltp, cepe, access) {  // Working fine works only in bet
             tag: 'string',
             instrument_token: instrumentKey,
             order_type: 'MARKET',
-            transaction_type: 'BUY',
+            transaction_type: type,
             disclosed_quantity: 0,
             trigger_price: 0,
             is_amo: false,
@@ -174,15 +190,21 @@ async function buy_order(ltp, cepe, access) {  // Working fine works only in bet
 }
 
 
-function checkBreak(access) {
+function checkBreak(lastPrice,access) {
     // If high price breaks, trigger buy function
     if(prevtimeblock && !timeblock && highBroken && !inorder){
-        buy_order(lastPrice,"CE",access);
+        buy_order(lastPrice,"CE",access,'BUY');
+        stageOne = lastPrice - (2/1000 * lastPrice);
            inorder = true;
+           bought = true;
+           count++;
     }
     if(prevtimeblock && !timeblock && lowBroken && !inorder){
-        buy_order(lastPrice,"PE",access);
+        buy_order(lastPrice,"PE",access,'BUY');
+        stageOne = lastPrice + (2/1000 * lastPrice);
            inorder = true;
+           sold = true;
+           count++;
     }
 
 }
@@ -228,7 +250,66 @@ function timeb() {
     }
 
 }
+async function sl_order(ltpKey,access) {
+     //  const auth = 'Bearer ' + access;
+        // console.log(auth);
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ' + access,
+        };
+       // const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
+        // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
+        const order_data = {
+            quantity: 15,
+            product: 'D',
+            validity: 'DAY',
+            price: 0,
+            tag: 'string',
+            instrument_token: ltpKey,
+            order_type: 'MARKET',
+            transaction_type: 'SELL',
+            disclosed_quantity: 0,
+            trigger_price: 0,
+            is_amo: false,
+          };
+          try {  
+        const response = await axios.post(order_url, order_data, { headers });
+        console.log(response.data);
+    } catch (error) {
+        console.log('Error:', error.message);
+    }
+}
+
+
+function stop_loss(ltp,access) {
+    if(inorder){
+        if(bought){
+        let sl = (highPrice - ((3/1000)*highPrice))
+        if(ltp <= sl || ltp <= stageOne){     
+            sl_order(ltpKey,access)
+            inorder = false;
+            bought = false;
+            
+            console.log("Bought");
+        }
+    }else if(sold){
+           let sl = ((3/1000 * lowPrice) + lowPrice);
+            if(ltp >= sl || ltp >= stageOne){
+            sl_order(ltpKey,access)
+            inorder = false;
+            sold = false;
+            
+            console.log("Sold");
+            }
+        }
+    }
+}
+
+
 const queue = new Queue();
+
+
 // Function to update high and low prices
 function updateHighLow(lastPrice,access) {
     // Update high price if last price is higher
@@ -236,8 +317,8 @@ function updateHighLow(lastPrice,access) {
         // checkBreak(lastPrice);
         highPrice = lastPrice;
         highBroken = true;
+        checkBreak(lastPrice,access);
         prevtimeb();
-        checkBreak(access);
         timeb();
         console.log(`New high price: ${highPrice}`);
     }
@@ -246,8 +327,8 @@ function updateHighLow(lastPrice,access) {
     if (lastPrice < lowPrice) {
         lowPrice = lastPrice;
         lowBroken = true;
-        prevtimeb(prevtimeblock);
-        checkBreak(access);
+        checkBreak(lastPrice,access);
+        prevtimeb();
         timeb();
         console.log(`New low price: ${lowPrice}`);
     }
@@ -256,11 +337,14 @@ function updateHighLow(lastPrice,access) {
     [highPrice,lowPrice] = queue.traverse();
     }
     queue.enqueue(lastPrice);
-    console.log(highPrice);
-    console.log(lowPrice);
+    console.log("High Price",highPrice);
+    console.log("Low Price",lowPrice);
+    console.log("Number Of Orders",count);
   highBroken = false;
   lowBroken = false;
+  stop_loss(lastPrice,access);
 }
+
 
 
 
@@ -292,7 +376,7 @@ async function fetchData(access){      // Working fine
         // console.log("Current High Price",highPrice);
         // console.log("Current Low Price",lowPrice);
          let ltp = myobj.data["NSE_INDEX:Nifty Bank"].last_price
-         stop_loss(ltp,access);
+         
          updateHighLow(ltp,access);
          
         

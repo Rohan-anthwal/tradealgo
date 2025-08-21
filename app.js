@@ -341,11 +341,42 @@ function timeb() {
 
 }
 
+// BUY ORDER API CALL
 
+async function buy_order(ltp, cepe, access,type) {  // Working fine works only in between market hours
+    
+      //  const auth = 'Bearer ' + access;
+        // console.log(auth);
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ' + access,
+        };
+        const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
+        ltpKey = instrumentKey;
+        // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
+        const order_data = {
+            quantity: 15,
+            product: 'D',
+            validity: 'DAY',
+            price: 0,
+            tag: 'string',
+            instrument_token: instrumentKey,
+            order_type: 'MARKET',
+            transaction_type: type,
+            disclosed_quantity: 0,
+            trigger_price: 0,
+            is_amo: false,
+          };
+          try {  
+        const response = await axios.post(order_url, order_data, { headers });
+        console.log(response.data);
+    } catch (error) {
+        console.log('Error:', error.message);
+    }
+}
 
-
-// TRAILING STOP LOSS MECHANISM
-
+// SELL API CALL
 async function sl_order(ltpKey,access) {
      //  const auth = 'Bearer ' + access;
         // console.log(auth);
@@ -378,6 +409,8 @@ async function sl_order(ltpKey,access) {
 }
 
 
+// TRAILING STOP LOSS MECHANISM
+
 function stop_loss(ltp,access) {
     if(inorder){
         if(bought){
@@ -403,7 +436,6 @@ function stop_loss(ltp,access) {
 }
 
 // QUEUE SEARCH ENGINE INITIALIZATION AND UPDATE
-
 const queue = new Queue();
 
 
@@ -527,40 +559,7 @@ async function sl_order(ltpKey,access) {
     }
 }
 
-// BUY ORDER API CALL
 
-async function buy_order(ltp, cepe, access,type) {  // Working fine works only in between market hours
-    
-      //  const auth = 'Bearer ' + access;
-        // console.log(auth);
-        const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + access,
-        };
-        const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
-        ltpKey = instrumentKey;
-        // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
-        const order_data = {
-            quantity: 15,
-            product: 'D',
-            validity: 'DAY',
-            price: 0,
-            tag: 'string',
-            instrument_token: instrumentKey,
-            order_type: 'MARKET',
-            transaction_type: type,
-            disclosed_quantity: 0,
-            trigger_price: 0,
-            is_amo: false,
-          };
-          try {  
-        const response = await axios.post(order_url, order_data, { headers });
-        console.log(response.data);
-    } catch (error) {
-        console.log('Error:', error.message);
-    }
-}
 
 
 

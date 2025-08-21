@@ -221,7 +221,7 @@ async function loadInstruments() {
     ]);
   }
 
-  console.log("✅ All instruments loaded into Postgres");
+  console.log(" All instruments loaded into Postgres");
   await db.end();
 }
 

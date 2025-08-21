@@ -19,5 +19,13 @@
   "devDependencies": {
     "chai": "^5.1.0",
     "mocha": "^10.3.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rohan-anthwal/tradealgo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Rohan-anthwal/tradealgo/issues"
+  },
+  "homepage": "https://github.com/Rohan-anthwal/tradealgo#readme"
 }

@@ -4,6 +4,7 @@ const app = express();
 const axios = require('axios');
 const PORT = process.env.PORT || 3000;
 const pg = require("pg") ;
+const fs = require("fs");
 // const url = 'https://api.upstox.com/v2/market-quote/ohlc';
 const order_url = 'https://api.upstox.com/v2/order/place';
 const url = "https://api.upstox.com/v2/market-quote/quotes?";
@@ -13,10 +14,10 @@ const token_url = 'https://api.upstox.com/v2/login/authorization/token';
 
 
 // Initialize variables to hold high and low prices
-let highPrice = 46937.46;
-let lowPrice = 46675.35;
+let highPrice ;
+let lowPrice ;
 let stageOne;
-let inorder = true;
+let inorder = true; 
 let highBroken = false; // Flag to track if high has broken in last 5-minute candle
 let lowBroken = false; // Flag to track if low has broken in last 5-minute candle
 let timeblock = false;
@@ -26,6 +27,43 @@ let sold = false;
 let ltpKey;
 let count  = 0;
 
+// REST CONTROLLERS AND CALLS
+
+app.get("/", (req, res) => {   // Working Fine
+    res.render("index.ejs");
+})
+
+app.get("/token", async(req,res)=>{   // Working Fine 
+    res.render("callback.ejs");
+    const code = req.query.code 
+    const access = await fetchAuthToken(code)
+    try {  
+
+       update_data(access);
+      
+       
+    } catch (error) {
+        console.log(error.message)
+    }
+
+})
+
+// USER ENTERED ESSENTIAL DATA
+app.post('/submit', (req, res) => {
+    highPrice = req.body.highprice;
+    lowPrice = req.body.lowprice;
+    //path = correctPathForJs(req.body.path);
+  console.log('Parsed body:', req.body); 
+  res.send('POST received!');
+});
+
+// CUSTOM FUNCTIONS UTIL
+ async function correctPathForJs(){
+
+ }
+
+
+
 // DS To store Values
 class Node {
     constructor(value) {
@@ -33,6 +71,8 @@ class Node {
         this.next = null;
     }
 }
+
+// QUEUE BASED SEARCH ENGINE 
 
 class Queue {
     constructor() {
@@ -92,29 +132,125 @@ class Queue {
     }
 }
 
+// DB CALLS AND CONNECTIONS
 
 //DATABASE CONNECTION
+
 const db = new pg.Client({ 
 user : "postgres",
 host : "localhost",
 database : "stocks",
-password : "rohan123",
+password : "rohan",
 port: 5432,
 });
 
  db.connect();
+
+
+// DB CALLS
+// FILE LOAD IN DB
+
+async function loadInstruments() {
   
 
+  // 1. Create table if it doesn't exist
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS instruments (
+      instrument_key TEXT PRIMARY KEY,
+      tradingsymbol TEXT,
+      name TEXT,
+      exchange TEXT,
+      segment TEXT,
+      instrument_type TEXT,
+      isin TEXT,
+      lot_size INT,
+      tick_size FLOAT,
+      exchange_token TEXT,
+      security_type TEXT,
+      short_name TEXT,
+      freeze_quantity FLOAT
+    );
+  `);
+
+  // 2. Read JSON file
+  const rawData = fs.readFileSync("C:/Users/rohan/Desktop/UIK/complete.json");
+
+  const data = JSON.parse(rawData);
+  console.log(`Found ${data.length} instruments...`);
+
+  // 3. Insert into DB
+  const queryText = `
+      INSERT INTO instruments 
+      (instrument_key, tradingsymbol, name, exchange, segment, instrument_type, isin, lot_size, tick_size, exchange_token, security_type, short_name, freeze_quantity)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+      ON CONFLICT (instrument_key) DO UPDATE SET
+        tradingsymbol = EXCLUDED.tradingsymbol,
+        name = EXCLUDED.name,
+        exchange = EXCLUDED.exchange,
+        segment = EXCLUDED.segment,
+        instrument_type = EXCLUDED.instrument_type,
+        isin = EXCLUDED.isin,
+        lot_size = EXCLUDED.lot_size,
+        tick_size = EXCLUDED.tick_size,
+        exchange_token = EXCLUDED.exchange_token,
+        security_type = EXCLUDED.security_type,
+        short_name = EXCLUDED.short_name,
+        freeze_quantity = EXCLUDED.freeze_quantity;
+    `;
+
+  for (let item of data) {
+    await db.query(queryText, [
+      item.instrument_key,
+      item.tradingsymbol,
+      item.name,
+      item.exchange,
+      item.segment,
+      item.instrument_type,
+      item.isin,
+      item.lot_size,
+      item.tick_size,
+      item.exchange_token,
+      item.security_type,
+      item.short_name,
+      item.freeze_quantity,
+    ]);
+  }
+
+  console.log("✅ All instruments loaded into Postgres");
+  await db.end();
+}
+
+loadInstruments().catch(console.error);
+
+//  DB CALL TO GET INSTRUMENT KEYS 
+// TAKES LAST TRADING PRICE AND CALL OR PUT AS PARAMETERS
+
+async function getInstrumentKey(ltp,cepe){  // Working fine
+    ltp = ltp/100;
+    ltp = Math.trunc(ltp);
+    ltp = ltp *100
+
+    if(cepe === "CE")ltp = ltp + 500 + "CE";
+    if(cepe === "PE")ltp = ltp - 500 + "PE";
+    let key = 'BANKNIFTY24403'
+    let option = key + ltp ;
+ const response = await db.query("SELECT instrument_key FROM public.stocks_table WHERE tradingsymbol = '"+ option + "'");
+ console.log(response.rows[0].instrument_key);
+ return response.rows[0].instrument_key
+ }
+//  async function test() {
+//     let g = await getInstrumentKey(46000,"PE");
+//  console.log(g);
+//  }
+//  test();
 
 
 
-app.get("/", (req, res) => {   // Working Fine
-    res.render("index.ejs");
-})
 
 
+// AUTHENTICATION TOKEN UPSTOX
 
-  async function fetchAuthToken(code) {   // Working fine
+async function fetchAuthToken(code) {   // Working fine
     const token_headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -135,61 +271,10 @@ app.get("/", (req, res) => {   // Working Fine
     }
 }
 
-async function getInstrumentKey(ltp,cepe){  // Working fine
-    
-    ltp = ltp/100;
-    ltp = Math.trunc(ltp);
-    ltp = ltp *100
-    if(cepe === "CE")ltp = ltp + 500 + "CE";
-    if(cepe === "PE")ltp = ltp - 500 + "PE";
-    let key = 'BANKNIFTY24403'
-    let option = key + ltp ;
- const response = await db.query("SELECT instrument_key FROM public.stocks_table WHERE tradingsymbol = '"+ option + "'");
- console.log(response.rows[0].instrument_key);
- return response.rows[0].instrument_key
- }
-//  async function test() {
-//     let g = await getInstrumentKey(46000,"PE");
-//  console.log(g);
-//  }
-//  test();
+
+// STRATEGY BLOCK
+
  
-
-
-async function buy_order(ltp, cepe, access,type) {  // Working fine works only in between market hours
-    
-      //  const auth = 'Bearer ' + access;
-        // console.log(auth);
-        const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + access,
-        };
-        const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
-        ltpKey = instrumentKey;
-        // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
-        const order_data = {
-            quantity: 15,
-            product: 'D',
-            validity: 'DAY',
-            price: 0,
-            tag: 'string',
-            instrument_token: instrumentKey,
-            order_type: 'MARKET',
-            transaction_type: type,
-            disclosed_quantity: 0,
-            trigger_price: 0,
-            is_amo: false,
-          };
-          try {  
-        const response = await axios.post(order_url, order_data, { headers });
-        console.log(response.data);
-    } catch (error) {
-        console.log('Error:', error.message);
-    }
-}
-
-
 function checkBreak(lastPrice,access) {
     // If high price breaks, trigger buy function
     if(prevtimeblock && !timeblock && highBroken && !inorder){
@@ -250,38 +335,10 @@ function timeb() {
     }
 
 }
-async function sl_order(ltpKey,access) {
-     //  const auth = 'Bearer ' + access;
-        // console.log(auth);
-        const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + access,
-        };
-       // const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
-        // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
-        const order_data = {
-            quantity: 15,
-            product: 'D',
-            validity: 'DAY',
-            price: 0,
-            tag: 'string',
-            instrument_token: ltpKey,
-            order_type: 'MARKET',
-            transaction_type: 'SELL',
-            disclosed_quantity: 0,
-            trigger_price: 0,
-            is_amo: false,
-          };
-          try {  
-        const response = await axios.post(order_url, order_data, { headers });
-        console.log(response.data);
-    } catch (error) {
-        console.log('Error:', error.message);
-    }
-}
 
 
+
+// TRAILING STOP LOSS MECHANISM
 function stop_loss(ltp,access) {
     if(inorder){
         if(bought){
@@ -306,7 +363,7 @@ function stop_loss(ltp,access) {
     }
 }
 
-
+// QUEUE SEARCH ENGINE INITIALIZATION AND UPDATE
 const queue = new Queue();
 
 
@@ -348,6 +405,9 @@ function updateHighLow(lastPrice,access) {
 
 
 
+// API CALLS 
+
+// API CALL TO FETCH DATA
 async function fetchData(access){      // Working fine
     const auth = 'Bearer ' + access;
     // console.log("fetchdata :-",auth)
@@ -386,6 +446,8 @@ async function fetchData(access){      // Working fine
     }
 }
 
+// API CALLS TO UPDATE DATA EVERY 2 SECONDS LIMIT SET BY UPSTOX
+
 function update_data(access){  // Working fine
     fetchData(access)
     setInterval(() => {
@@ -393,21 +455,74 @@ function update_data(access){  // Working fine
     }, 2000);
 } 
 
+// SELL ORDER API CALL
 
-app.get("/token", async(req,res)=>{   // Working Fine 
-    res.render("callback.ejs");
-    const code = req.query.code 
-    const access_token = await fetchAuthToken(code)
-    try {  
-
-       update_data(access_token);
-      
-       
+async function sl_order(ltpKey,access) {
+     //  const auth = 'Bearer ' + access;
+        // console.log(auth);
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ' + access,
+        };
+       // const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
+        // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
+        const order_data = {
+            quantity: 15,
+            product: 'D',
+            validity: 'DAY',
+            price: 0,
+            tag: 'string',
+            instrument_token: ltpKey,
+            order_type: 'MARKET',
+            transaction_type: 'SELL',
+            disclosed_quantity: 0,
+            trigger_price: 0,
+            is_amo: false,
+          };
+          try {  
+        const response = await axios.post(order_url, order_data, { headers });
+        console.log(response.data);
     } catch (error) {
-        console.log(error.message)
+        console.log('Error:', error.message);
     }
+}
 
-})
+// BUY ORDER API CALL
+
+async function buy_order(ltp, cepe, access,type) {  // Working fine works only in between market hours
+    
+      //  const auth = 'Bearer ' + access;
+        // console.log(auth);
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ' + access,
+        };
+        const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
+        ltpKey = instrumentKey;
+        // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
+        const order_data = {
+            quantity: 15,
+            product: 'D',
+            validity: 'DAY',
+            price: 0,
+            tag: 'string',
+            instrument_token: instrumentKey,
+            order_type: 'MARKET',
+            transaction_type: type,
+            disclosed_quantity: 0,
+            trigger_price: 0,
+            is_amo: false,
+          };
+          try {  
+        const response = await axios.post(order_url, order_data, { headers });
+        console.log(response.data);
+    } catch (error) {
+        console.log('Error:', error.message);
+    }
+}
+
 
 
 app.listen(PORT, () => {

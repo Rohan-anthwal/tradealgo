@@ -4,17 +4,13 @@ const app = express();
 const axios = require('axios');
 const PORT = process.env.PORT || 3000;
 const pg = require("pg") ;
-<<<<<<< HEAD
+
 const fs = require("fs");
-=======
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 // const url = 'https://api.upstox.com/v2/market-quote/ohlc';
 const order_url = 'https://api.upstox.com/v2/order/place';
 const url = "https://api.upstox.com/v2/market-quote/quotes?";
 const ltp_url = "https://api.upstox.com/v2/market-quote/ltp?";
 const token_url = 'https://api.upstox.com/v2/login/authorization/token';
-
-<<<<<<< HEAD
 
 
 // Initialize variables to hold high and low prices
@@ -22,22 +18,14 @@ let highPrice ;
 let lowPrice ;
 let stageOne;
 let inorder = true; 
-=======
-// NEED TO WRITE SL FUNCTION AND HIGH LOW UPDATION
 
-// Initialize variables to hold high and low prices
-let highPrice = 46937.45;
-let lowPrice = 46675.35;
-let stageOne;
-let inorder = true;
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 let highBroken = false; // Flag to track if high has broken in last 5-minute candle
 let lowBroken = false; // Flag to track if low has broken in last 5-minute candle
 let timeblock = false;
 let prevtimeblock = false;
 let bought = true;
 let sold = false;
-<<<<<<< HEAD
+
 let ltpKey;
 let count  = 0;
 
@@ -77,12 +65,6 @@ app.post('/submit', (req, res) => {
  }
 
 
-
-=======
-let ltpKey = ;
-let count  = 0;
-
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 // DS To store Values
 class Node {
     constructor(value) {
@@ -91,11 +73,9 @@ class Node {
     }
 }
 
-<<<<<<< HEAD
+
 // QUEUE BASED SEARCH ENGINE 
 
-=======
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 class Queue {
     constructor() {
         this.front = null;
@@ -154,7 +134,7 @@ class Queue {
     }
 }
 
-<<<<<<< HEAD
+
 // DB CALLS AND CONNECTIONS
 
 //DATABASE CONNECTION
@@ -164,20 +144,12 @@ user : "postgres",
 host : "localhost",
 database : "stocks",
 password : "rohan",
-=======
 
-//DATABASE CONNECTION
-const db = new pg.Client({   //Working Fine
-user : "postgres",
-host : "localhost",
-database : "stocks",
-password : "rohan123",
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 port: 5432,
 });
 
  db.connect();
-<<<<<<< HEAD
+
 
 
 // DB CALLS
@@ -283,21 +255,7 @@ async function getInstrumentKey(ltp,cepe){  // Working fine
 
 // AUTHENTICATION TOKEN UPSTOX
 
-async function fetchAuthToken(code) {   // Working fine
-=======
-  
-
-
-
-
-app.get("/", (req, res) => {   // Working Fine
-    res.render("index.ejs");
-})
-
-
-
-  async function fetchAuthToken(code) {   // Working fine
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
+async function fetchAuthToken(code) {   //Working fine
     const token_headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -318,68 +276,10 @@ app.get("/", (req, res) => {   // Working Fine
     }
 }
 
-<<<<<<< HEAD
+
 
 // STRATEGY BLOCK
 
- 
-=======
-async function getInstrumentKey(ltp,cepe){  // Working fine
-    
-    ltp = ltp/100;
-    ltp = Math.trunc(ltp);
-    ltp = ltp *100
-    if(cepe === "CE")ltp = ltp + 500 + "CE";
-    if(cepe === "PE")ltp = ltp - 500 + "PE";
-    let key = 'BANKNIFTY24403'
-    let option = key + ltp ;
- const response = await db.query("SELECT instrument_key FROM public.stocks_table WHERE tradingsymbol = '"+ option + "'");
- console.log(response.rows[0].instrument_key);
- return response.rows[0].instrument_key
- }
-//  async function test() {
-//     let g = await getInstrumentKey(46000,"PE");
-//  console.log(g);
-//  }
-//  test();
- 
-
-
-async function buy_order(ltp, cepe, access,type) {  // Working fine works only in between market hours
-    
-      //  const auth = 'Bearer ' + access;
-        // console.log(auth);
-        const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + access,
-        };
-        const instrumentKey = await getInstrumentKey(ltp, cepe); // Wait for instrument key retrieval
-        ltpKey = instrumentKey;
-        // console.log("instrument Key buy Order:- ","'"+instrumentKey+"'")
-        const order_data = {
-            quantity: 15,
-            product: 'D',
-            validity: 'DAY',
-            price: 0,
-            tag: 'string',
-            instrument_token: instrumentKey,
-            order_type: 'MARKET',
-            transaction_type: type,
-            disclosed_quantity: 0,
-            trigger_price: 0,
-            is_amo: false,
-          };
-          try {  
-        const response = await axios.post(order_url, order_data, { headers });
-        console.log(response.data);
-    } catch (error) {
-        console.log('Error:', error.message);
-    }
-}
-
-
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 function checkBreak(lastPrice,access) {
     // If high price breaks, trigger buy function
     if(prevtimeblock && !timeblock && highBroken && !inorder){
@@ -440,12 +340,12 @@ function timeb() {
     }
 
 }
-<<<<<<< HEAD
+
 
 
 
 // TRAILING STOP LOSS MECHANISM
-=======
+
 async function sl_order(ltpKey,access) {
      //  const auth = 'Bearer ' + access;
         // console.log(auth);
@@ -478,7 +378,6 @@ async function sl_order(ltpKey,access) {
 }
 
 
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 function stop_loss(ltp,access) {
     if(inorder){
         if(bought){
@@ -503,11 +402,8 @@ function stop_loss(ltp,access) {
     }
 }
 
-<<<<<<< HEAD
 // QUEUE SEARCH ENGINE INITIALIZATION AND UPDATE
-=======
 
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 const queue = new Queue();
 
 
@@ -546,15 +442,10 @@ function updateHighLow(lastPrice,access) {
   stop_loss(lastPrice,access);
 }
 
-
-
-
-<<<<<<< HEAD
 // API CALLS 
 
 // API CALL TO FETCH DATA
-=======
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
+
 async function fetchData(access){      // Working fine
     const auth = 'Bearer ' + access;
     // console.log("fetchdata :-",auth)
@@ -593,11 +484,8 @@ async function fetchData(access){      // Working fine
     }
 }
 
-<<<<<<< HEAD
 // API CALLS TO UPDATE DATA EVERY 2 SECONDS LIMIT SET BY UPSTOX
 
-=======
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 function update_data(access){  // Working fine
     fetchData(access)
     setInterval(() => {
@@ -605,7 +493,7 @@ function update_data(access){  // Working fine
     }, 2000);
 } 
 
-<<<<<<< HEAD
+
 // SELL ORDER API CALL
 
 async function sl_order(ltpKey,access) {
@@ -674,23 +562,6 @@ async function buy_order(ltp, cepe, access,type) {  // Working fine works only i
     }
 }
 
-=======
-
-app.get("/token", async(req,res)=>{   // Working Fine 
-    res.render("callback.ejs");
-    const code = req.query.code 
-    const access_token = await fetchAuthToken(code)
-    try {  
-
-       update_data(access_token);
-      
-       
-    } catch (error) {
-        console.log(error.message)
-    }
-
-})
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 
 
 app.listen(PORT, () => {

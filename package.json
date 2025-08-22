@@ -12,18 +12,15 @@
     "axios": "^1.6.7",
     "ejs": "^3.1.9",
     "express": "^4.18.3",
-<<<<<<< HEAD
+
     "nodemon": "^3.1.10",
-=======
-    "nodemon": "^3.1.0",
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
+
     "pg": "^8.11.3",
     "sinon": "^17.0.1"
   },
   "devDependencies": {
     "chai": "^5.1.0",
     "mocha": "^10.3.0"
-<<<<<<< HEAD
   },
   "repository": {
     "type": "git",
@@ -33,7 +30,4 @@
     "url": "https://github.com/Rohan-anthwal/tradealgo/issues"
   },
   "homepage": "https://github.com/Rohan-anthwal/tradealgo#readme"
-=======
-  }
->>>>>>> da8b5b24ff688e3c2436ff93647621e9fd2326a2
 }

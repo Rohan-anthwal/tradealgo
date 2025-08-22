@@ -13,6 +13,12 @@ const ltp_url = "https://api.upstox.com/v2/market-quote/ltp?";
 const token_url = 'https://api.upstox.com/v2/login/authorization/token';
 
 
+// Middleware to parse URL-encoded bodies from the form
+app.use(express.urlencoded({ extended: true }));
+
+// Path to your EJS templates
+app.set("view engine", "ejs");
+
 // Initialize variables to hold high and low prices
 let highPrice ;
 let lowPrice ;
@@ -222,7 +228,7 @@ async function loadInstruments() {
   }
 
   console.log(" All instruments loaded into Postgres");
-  await db.end();
+  //await db.end();
 }
 
 loadInstruments().catch(console.error);

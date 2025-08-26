@@ -28,6 +28,7 @@
             width: 100%;
             max-width: 420px;
             box-sizing: border-box;
+            margin: 1rem;
         }
 
         h1 {
@@ -95,7 +96,7 @@
         }
 
         /* Message box styling */
-        #message {
+        .message {
             margin-top: 1.5rem;
             padding: 0.75rem;
             border-radius: 0.5rem;
@@ -118,41 +119,38 @@
 </head>
 <body>
 
+    <!-- Login Form -->
     <div class="form-container">
-        <h1>Trading Bot Configuration</h1>
-        <form id="configForm">
+        <h1>Trading Bot Login</h1>
+        <form id="loginForm">
             <div class="form-group">
-                <label for="highprice">Initial High Price</label>
-                <input type="text" id="highprice" name="highprice" placeholder="e.g., 47000.50" required>
+                <label for="clientid">Client ID</label>
+                <input type="text" id="clientid" name="clientid" placeholder="e.g., A1B2C3D4E5F6G7H8I9J0K1L2" required>
             </div>
             <div class="form-group">
-                <label for="lowprice">Initial Low Price</label>
-                <input type="text" id="lowprice" name="lowprice" placeholder="e.g., 46500.25" required>
+                <label for="secret">Secret</label>
+                <input type="text" id="secret" name="secret" placeholder="e.g., Z9Y8X7W6V5U4T3S2R1Q0P9O8" required>
             </div>
-            <button type="submit">Save and Start Bot</button>
-            <div id="message"></div>
+            <button type="submit">Login</button>
+            <div id="loginMessage" class="message"></div>
         </form>
     </div>
-
     <script>
-        document.getElementById('configForm').addEventListener('submit', async function(event) {
-            // Prevent the default form submission
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
             event.preventDefault();
             
             const form = event.target;
             const button = form.querySelector('button');
-            const messageDiv = document.getElementById('message');
+            const messageDiv = document.getElementById('loginMessage');
 
-            // Show loading state
             button.disabled = true;
-            button.textContent = 'Saving...';
-            messageDiv.style.opacity = '0'; // Hide any previous message
+            button.textContent = 'Logging in...';
+            messageDiv.style.opacity = '0';
 
-            // Create URL-encoded form data
             const formData = new URLSearchParams(new FormData(form)).toString();
 
             try {
-                const response = await fetch('/submit', {
+                const response = await fetch('/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -161,25 +159,23 @@
                 });
 
                 if (response.ok) {
-                    messageDiv.textContent = 'Configuration saved successfully! The bot is now starting.';
-                    messageDiv.className = 'success';
+                    messageDiv.textContent = 'Login credentials submitted successfully!';
+                    messageDiv.className = 'message success';
                 } else {
                     const errorText = await response.text();
                     messageDiv.textContent = `Error: ${response.status} - ${errorText}`;
-                    messageDiv.className = 'error';
+                    messageDiv.className = 'message error';
                 }
             } catch (error) {
                 console.error('Fetch error:', error);
                 messageDiv.textContent = 'Failed to connect to the server. Please check the console.';
-                messageDiv.className = 'error';
+                messageDiv.className = 'message error';
             } finally {
-                // Reset button state
                 button.disabled = false;
-                button.textContent = 'Save and Start Bot';
-                messageDiv.style.opacity = '1'; // Show the message
+                button.textContent = 'Login';
+                messageDiv.style.opacity = '1';
             }
         });
     </script>
-
-</body>
+    </body>
 </html>

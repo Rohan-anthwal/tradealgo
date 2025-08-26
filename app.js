@@ -4,17 +4,22 @@ const app = express();
 const axios = require('axios');
 const PORT = process.env.PORT || 3000;
 const pg = require("pg") ;
-
+const session = require('express-session');
 const fs = require("fs");
 // const url = 'https://api.upstox.com/v2/market-quote/ohlc';
 const order_url = 'https://api.upstox.com/v2/order/place';
 const url = "https://api.upstox.com/v2/market-quote/quotes?";
-const ltp_url = "https://api.upstox.com/v2/market-quote/ltp?";
+const ltp_url = 'https://api.upstox.com/v3/market-quote/ltp?';
 const token_url = 'https://api.upstox.com/v2/login/authorization/token';
 
 
 // Middleware to parse URL-encoded bodies from the form
 app.use(express.urlencoded({ extended: true }));
+app.use(session({
+  secret: process.env.SESSION_SECRET,  // store securely in .env
+  resave: false,
+  saveUninitialized: true,
+}));
 
 // Path to your EJS templates
 app.set("view engine", "ejs");
@@ -35,40 +40,106 @@ let sold = false;
 let ltpKey;
 let count  = 0;
 
+// AUTHENTICATION SECRETS 
+//==================================
+let client_id;
+let client_secret;
+let accessToken; 
+//==================================
+const redirect_uri = "http://localhost:3000/token";
+const auth_url = "https://example.com/oauth/authorize";
+
 // REST CONTROLLERS AND CALLS
 
 app.get("/", (req, res) => {   // Working Fine
     res.render("index.ejs");
 })
 
-app.get("/token", async(req,res)=>{   // Working Fine 
-    res.render("callback.ejs");
-    const code = req.query.code 
-    const access = await fetchAuthToken(code)
-    try {  
+// -------------------- Auth and Redirect----------------------
+app.get("/login", (req, res) => {
+  
+  const auth_url = 'https://api.upstox.com/v2/login/authorization/dialog?' +
+    `client_id=${encodeURIComponent(client_id)}` +
+    `&response_type=code` +
+    `&redirect_uri=${encodeURIComponent(redirect_uri)}`;
+ console.log(auth_url)
+  res.redirect(auth_url); // send user to login
+});
 
-       update_data(access);
+// app.get("/token", async(req,res)=>{   // Working Fine 
+//     res.render("index.ejs");
+//     const code = req.query.code 
+//     const access = await fetchAuthToken(code)
+//     console.log("fetchAuth worked fine")
+//     console.log("access Token :- " + access.access_token)
+//     try {  
+
+//        update_data(access.access_token);
       
        
+//     } catch (error) {
+//         console.log(error.message)
+//     }
+
+// })
+
+// // USER ENTERED ESSENTIAL DATA
+// app.post('/submit', (req, res) => {
+//     highPrice = req.body.highprice;
+//     lowPrice = req.body.lowprice;
+//     client_id = req.body.client_id;
+//     client_secret = req.body.client_secret;
+//     //path = correctPathForJs(req.body.path);
+//   console.log('Parsed body:', req.body); 
+//   res.send('POST received!');
+// });
+
+
+
+app.get("/token", async (req, res) => {
+    res.render("callback.ejs");
+    const code = req.query.code;
+    try {
+        const access = await fetchAuthToken(code);
+        console.log("fetchAuth worked fine");
+        console.log("access Token :- " + access.access_token);
+        // Store the token without calling update_data here
+        accessToken = access.access_token; 
     } catch (error) {
-        console.log(error.message)
+        console.log(error.message);
     }
+});
 
-})
-
-// USER ENTERED ESSENTIAL DATA
 app.post('/submit', (req, res) => {
     highPrice = req.body.highprice;
     lowPrice = req.body.lowprice;
-    //path = correctPathForJs(req.body.path);
-  console.log('Parsed body:', req.body); 
-  res.send('POST received!');
+    
+    console.log('Parsed body:', req.body);
+    
+    // Check if the accessToken is available
+    if (accessToken) {
+        try {
+            // Now, call update_data with the stored token and other form data
+            update_data(accessToken); 
+            console.log("update_data called successfully after form submission.");
+            // Reset the token for the next user or session
+            accessToken = null; 
+        } catch (error) {
+            console.log("Error calling update_data: " + error.message);
+        }
+    } else {
+        console.log("No access token available. Please visit /token first.");
+    }
+
+    res.send('POST received!');
 });
 
-// CUSTOM FUNCTIONS UTIL
- async function correctPathForJs(){
+app.post('/login', (req,res) => {
+    client_id = req.body.client_id;
+    client_secret = req.body.client_secret;
+     res.redirect('/login');
+})
 
- }
 
 
 // DS To store Values
@@ -266,20 +337,27 @@ async function fetchAuthToken(code) {   //Working fine
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
       };
-    const token_data = {
-        'code': code,
-       
-        'redirect_uri': 'http://localhost:3000/token',
-        'grant_type': code,
+  const token_data = {
+    code: code,
+    client_id: client_id,
+    client_secret: client_secret,
+    redirect_uri: "http://localhost:3000/token", 
+    grant_type: "authorization_code",
+  };
 
-    };
+  try {
+    const response = await axios.post(
+      token_url,
+      new URLSearchParams(token_data),
+      { headers: token_headers }
+    );
+    console.log(response.data)
+    return response.data; 
+  } catch (error) {
+    console.error("Token exchange failed:", error.response?.data || error.message);
+    throw new Error("Failed to fetch authentication token");
+  }
 
-    try {
-        const response = await axios.post(token_url, new URLSearchParams(token_data), token_headers);
-        return response.data.access_token; // Return the access token
-    } catch (error) {
-        throw new Error('Failed to fetch authentication token');
-    }
 }
 
 
@@ -486,14 +564,13 @@ function updateHighLow(lastPrice,access) {
 
 async function fetchData(access){      // Working fine
     const auth = 'Bearer ' + access;
-    // console.log("fetchdata :-",auth)
+     //console.log("fetchdata :-",auth)
     const headers = {
         'Authorization': auth,
         'Accept': 'application/json',        
     }
     const params = {
-        instrument_key: 'NSE_INDEX|Nifty Bank',
-      
+        instrument_key: 'NSE_INDEX|Nifty Bank', 
       };
       try {
   

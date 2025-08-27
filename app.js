@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3000;
 const pg = require("pg") ;
 const session = require('express-session');
 const fs = require("fs");
+
 // const url = 'https://api.upstox.com/v2/market-quote/ohlc';
 const order_url = 'https://api.upstox.com/v2/order/place';
 const url = "https://api.upstox.com/v2/market-quote/quotes?";
@@ -16,7 +17,7 @@ const token_url = 'https://api.upstox.com/v2/login/authorization/token';
 // Middleware to parse URL-encoded bodies from the form
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  secret: process.env.SESSION_SECRET,  // store securely in .env
+  secret: process.env.SESSION_SECRET || "123",  // store securely in .env
   resave: false,
   saveUninitialized: true,
 }));
@@ -47,11 +48,10 @@ let client_secret;
 let accessToken; 
 //==================================
 const redirect_uri = "http://localhost:3000/token";
-const auth_url = "https://example.com/oauth/authorize";
 
 // REST CONTROLLERS AND CALLS
 
-app.get("/", (req, res) => {   // Working Fine
+app.get("/", (req, res) => {   
     res.render("index.ejs");
 })
 
@@ -101,9 +101,8 @@ app.get("/token", async (req, res) => {
     const code = req.query.code;
     try {
         const access = await fetchAuthToken(code);
-        console.log("fetchAuth worked fine");
-        console.log("access Token :- " + access.access_token);
-        // Store the token without calling update_data here
+        //console.log("fetchAuth worked fine");
+        //console.log("access Token :- " + access.access_token);
         accessToken = access.access_token; 
     } catch (error) {
         console.log(error.message);
@@ -135,9 +134,11 @@ app.post('/submit', (req, res) => {
 });
 
 app.post('/login', (req,res) => {
-    client_id = req.body.client_id;
-    client_secret = req.body.client_secret;
-     res.redirect('/login');
+    client_id = req.body.clientid;
+    client_secret = req.body.secret;
+    console.log(client_id);
+    console.log(client_secret);
+    res.redirect('/login');
 })
 
 

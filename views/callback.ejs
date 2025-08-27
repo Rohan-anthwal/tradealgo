@@ -89,32 +89,6 @@
         button:active {
             transform: scale(0.99);
         }
-        
-        button:disabled {
-            background-color: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        /* Message box styling */
-        .message {
-            margin-top: 1.5rem;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
-
-        .success {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-
-        .error {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
     </style>
 </head>
 <body>
@@ -122,7 +96,7 @@
     <!-- Configuration Form -->
     <div class="form-container">
         <h1>Trading Bot Configuration</h1>
-        <form id="configForm">
+        <form id="configForm" action="/submit" method="post">
             <div class="form-group">
                 <label for="highprice">Initial High Price</label>
                 <input type="text" id="highprice" name="highprice" placeholder="e.g., 47000.50" required>
@@ -132,51 +106,7 @@
                 <input type="text" id="lowprice" name="lowprice" placeholder="e.g., 46500.25" required>
             </div>
             <button type="submit">Save and Start Bot</button>
-            <div id="configMessage" class="message"></div>
         </form>
     </div>
-    <script>
-            document.getElementById('configForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
-            
-            const form = event.target;
-            const button = form.querySelector('button');
-            const messageDiv = document.getElementById('configMessage');
-
-            button.disabled = true;
-            button.textContent = 'Saving...';
-            messageDiv.style.opacity = '0';
-
-            const formData = new URLSearchParams(new FormData(form)).toString();
-
-            try {
-                const response = await fetch('/submit', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: formData,
-                });
-
-                if (response.ok) {
-                    messageDiv.textContent = 'Configuration saved successfully! The bot is now starting.';
-                    messageDiv.className = 'message success';
-                } else {
-                    const errorText = await response.text();
-                    messageDiv.textContent = `Error: ${response.status} - ${errorText}`;
-                    messageDiv.className = 'message error';
-                }
-            } catch (error) {
-                console.error('Fetch error:', error);
-                messageDiv.textContent = 'Failed to connect to the server. Please check the console.';
-                messageDiv.className = 'message error';
-            } finally {
-                button.disabled = false;
-                button.textContent = 'Save and Start Bot';
-                messageDiv.style.opacity = '1';
-            }
-        });
-    </script>
-
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upstox Trading Bot Configuration</title>
+    <title>Upstox Trading Bot Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -28,7 +28,6 @@
             width: 100%;
             max-width: 420px;
             box-sizing: border-box;
-            margin: 1rem;
         }
 
         h1 {
@@ -89,40 +88,13 @@
         button:active {
             transform: scale(0.99);
         }
-        
-        button:disabled {
-            background-color: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        /* Message box styling */
-        .message {
-            margin-top: 1.5rem;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
-
-        .success {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-
-        .error {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
     </style>
 </head>
 <body>
 
-    <!-- Login Form -->
     <div class="form-container">
         <h1>Trading Bot Login</h1>
-        <form id="loginForm">
+        <form id="loginForm" action="/login" method="post">
             <div class="form-group">
                 <label for="clientid">Client ID</label>
                 <input type="text" id="clientid" name="clientid" placeholder="e.g., A1B2C3D4E5F6G7H8I9J0K1L2" required>
@@ -132,50 +104,8 @@
                 <input type="text" id="secret" name="secret" placeholder="e.g., Z9Y8X7W6V5U4T3S2R1Q0P9O8" required>
             </div>
             <button type="submit">Login</button>
-            <div id="loginMessage" class="message"></div>
         </form>
     </div>
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
-            
-            const form = event.target;
-            const button = form.querySelector('button');
-            const messageDiv = document.getElementById('loginMessage');
 
-            button.disabled = true;
-            button.textContent = 'Logging in...';
-            messageDiv.style.opacity = '0';
-
-            const formData = new URLSearchParams(new FormData(form)).toString();
-
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: formData,
-                });
-
-                if (response.ok) {
-                    messageDiv.textContent = 'Login credentials submitted successfully!';
-                    messageDiv.className = 'message success';
-                } else {
-                    const errorText = await response.text();
-                    messageDiv.textContent = `Error: ${response.status} - ${errorText}`;
-                    messageDiv.className = 'message error';
-                }
-            } catch (error) {
-                console.error('Fetch error:', error);
-                messageDiv.textContent = 'Failed to connect to the server. Please check the console.';
-                messageDiv.className = 'message error';
-            } finally {
-                button.disabled = false;
-                button.textContent = 'Login';
-                messageDiv.style.opacity = '1';
-            }
-        });
-    </script>
-    </body>
+</body>
 </html>

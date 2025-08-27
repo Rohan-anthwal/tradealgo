@@ -136,8 +136,8 @@ app.post('/submit', (req, res) => {
 app.post('/login', (req,res) => {
     client_id = req.body.clientid;
     client_secret = req.body.secret;
-    console.log(client_id);
-    console.log(client_secret);
+    // console.log(client_id);
+    // console.log(client_secret);
     res.redirect('/login');
 })
 
